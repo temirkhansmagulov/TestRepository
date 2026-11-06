@@ -1,0 +1,466 @@
+<title>Slot Book</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a day strip across the top, the slot grid as the main column, your bookings in a side column that drops below on phones. */
+:root {
+  --paper: #f5f6f3;
+  --card: #ffffff;
+  --ink: #18212b;
+  --muted: #5d6874;
+  --line: #dde1dc;
+  --accent: #2448c9;
+  --accent-ink: #ffffff;
+  --accent-soft: #e6ebfb;
+  --mine: #1f7a4d;
+  --mine-soft: #e2f2e9;
+  --taken: #eceeea;
+  --taken-ink: #8a929a;
+  --warn: #a6461b;
+  --warn-soft: #fbece4;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12171d; --card: #1a2129; --ink: #e8ebee; --muted: #9aa5b0; --line: #2b343e;
+    --accent: #7d9bff; --accent-ink: #0d1424; --accent-soft: #1f2a48;
+    --mine: #5fcf96; --mine-soft: #173326; --taken: #20272f; --taken-ink: #6c7782;
+    --warn: #f0976b; --warn-soft: #3a2218;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12171d; --card: #1a2129; --ink: #e8ebee; --muted: #9aa5b0; --line: #2b343e;
+  --accent: #7d9bff; --accent-ink: #0d1424; --accent-soft: #1f2a48;
+  --mine: #5fcf96; --mine-soft: #173326; --taken: #20272f; --taken-ink: #6c7782;
+  --warn: #f0976b; --warn-soft: #3a2218;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+}
+.wrap {
+  max-width: 1080px; margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 24px;
+}
+header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: clamp(28px, 5vw, 40px); line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.lede { margin: 6px 0 0; color: var(--muted); max-width: 60ch; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-family: var(--font-mono); font-size: 12px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--card); white-space: nowrap; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.notice { padding: 10px 14px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+
+.days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.day {
+  flex: 0 0 auto; min-width: 68px; padding: 8px 10px 9px; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--card); text-align: center;
+  display: flex; flex-direction: column; gap: 1px;
+}
+.day .dow { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.day .dnum { font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1.1; }
+.day .free { font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.day[aria-pressed="true"] .dow, .day[aria-pressed="true"] .free { color: var(--paper); opacity: 0.8; }
+.day.full .free { color: var(--warn); }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+@media (max-width: 820px) { .main { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-weight: 700; font-size: 20px; margin: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; background: var(--sw); border: 1px solid var(--line); }
+
+.slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 8px; }
+.slot {
+  border: 1px solid var(--line); background: var(--card); border-radius: 10px;
+  padding: 10px 8px; text-align: center; display: flex; flex-direction: column; gap: 2px;
+  transition: border-color .12s, background .12s;
+}
+.slot .t { font-family: var(--font-mono); font-weight: 500; font-size: 15px; font-variant-numeric: tabular-nums; }
+.slot .s { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slot.open:hover { border-color: var(--accent); background: var(--accent-soft); }
+.slot.selected { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.slot.selected .s { color: var(--accent-ink); }
+.slot.taken { background: var(--taken); color: var(--taken-ink); cursor: default; border-style: dashed; }
+.slot.taken .s { color: var(--taken-ink); }
+.slot.mine { background: var(--mine-soft); border-color: var(--mine); color: var(--mine); }
+.slot.mine .s { color: var(--mine); }
+.slot.past { opacity: 0.45; cursor: default; }
+.empty { color: var(--muted); padding: 24px 0; text-align: center; }
+
+.confirm { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.confirm .when { font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+label { font-size: 13px; color: var(--muted); display: flex; flex-direction: column; gap: 4px; }
+input, select { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; width: 100%; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 8px; padding: 9px 16px; font-weight: 600; }
+.btn:disabled { opacity: 0.55; cursor: progress; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); font-weight: 500; }
+.btn.danger { background: transparent; color: var(--warn); border-color: var(--warn); font-weight: 500; padding: 5px 10px; font-size: 13px; }
+.status { font-size: 13px; min-height: 1.4em; }
+.status.ok { color: var(--mine); } .status.err { color: var(--warn); }
+
+aside { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.list li { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.list li:first-child { border-top: 0; padding-top: 0; }
+.list .lt { font-family: var(--font-mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.list .ln { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.small { font-size: 13px; color: var(--muted); margin: 0; }
+
+details.settings summary { cursor: pointer; font-family: var(--font-display); font-weight: 700; font-size: 18px; }
+.settings form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 16px; }
+.settings .wide { grid-column: 1 / -1; }
+.dowpick { display: flex; flex-wrap: wrap; gap: 6px; }
+.dowpick label { flex-direction: row; align-items: center; gap: 4px; color: var(--ink); font-size: 13px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; }
+.dowpick input { width: auto; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="title">Book a time slot</h1>
+      <p class="lede" id="desc">Pick a day, choose an open time, and confirm. Your booking is saved for everyone who opens this page.</p>
+    </div>
+    <div class="meta">
+      <span class="chip" id="chipLen">30 min slots</span>
+      <span class="chip" id="chipTz">Times shown in your local time</span>
+    </div>
+  </header>
+
+  <div class="notice" id="notice" hidden></div>
+
+  <nav class="days" id="days" aria-label="Choose a day"></nav>
+
+  <div class="main">
+    <section class="panel" aria-labelledby="dayTitle">
+      <div class="panel-head">
+        <h2 id="dayTitle">Loading schedule…</h2>
+        <div class="legend">
+          <span style="--sw: var(--card)">Open</span>
+          <span style="--sw: var(--taken)">Booked</span>
+          <span style="--sw: var(--mine-soft)">Yours</span>
+        </div>
+      </div>
+      <div class="slots" id="slots"></div>
+      <div class="confirm" id="confirm" hidden>
+        <div class="when" id="confirmWhen"></div>
+        <label for="note">Note for the host (optional)
+          <input id="note" maxlength="120" placeholder="e.g. Questions about the project brief">
+        </label>
+        <div class="row">
+          <button class="btn" id="bookBtn" type="button">Book this slot</button>
+          <button class="btn ghost" id="cancelSel" type="button">Choose another</button>
+        </div>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+    </section>
+
+    <aside>
+      <section class="panel" aria-labelledby="mineTitle">
+        <div class="panel-head"><h2 id="mineTitle">Your bookings</h2></div>
+        <ul class="list" id="mine"></ul>
+        <p class="small" id="mineEmpty">You have no upcoming bookings. Pick an open slot to add one.</p>
+      </section>
+      <section class="panel" id="allPanel" aria-labelledby="allTitle" hidden>
+        <div class="panel-head"><h2 id="allTitle">All bookings</h2><span class="chip" id="allCount">0</span></div>
+        <ul class="list" id="all"></ul>
+        <p class="small" id="allEmpty">Nobody has booked yet.</p>
+      </section>
+    </aside>
+  </div>
+
+  <section class="panel" id="settingsPanel" hidden>
+    <details class="settings">
+      <summary>Schedule settings</summary>
+      <p class="small" style="margin-top:8px">Only you and editors see this. Changes apply for everyone right away. Existing bookings stay put.</p>
+      <form id="settingsForm">
+        <label class="wide" for="sTitle">Page title<input id="sTitle" maxlength="80" required></label>
+        <label class="wide" for="sDesc">Description<input id="sDesc" maxlength="200"></label>
+        <label for="sStart">Day starts<input id="sStart" type="time" required></label>
+        <label for="sEnd">Day ends<input id="sEnd" type="time" required></label>
+        <label for="sLen">Slot length
+          <select id="sLen"><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option><option value="90">90 min</option></select>
+        </label>
+        <label for="sHorizon">Book ahead
+          <select id="sHorizon"><option value="7">1 week</option><option value="14">2 weeks</option><option value="21">3 weeks</option><option value="28">4 weeks</option></select>
+        </label>
+        <label for="sTz">Time zone label<input id="sTz" maxlength="60" placeholder="e.g. Asia/Almaty"></label>
+        <div class="wide"><label>Open days</label><div class="dowpick" id="sDays"></div></div>
+        <div class="wide row"><button class="btn" type="submit" id="saveSettings">Save settings</button><span class="status" id="settingsStatus"></span></div>
+      </form>
+    </details>
+  </section>
+</div>
+
+<script>
+(() => {
+  const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const DEFAULTS = { title: "Book a time slot", description: "Pick a day, choose an open time, and confirm. Your booking is saved for everyone who opens this page.", start: "09:00", end: "17:00", slotMinutes: 30, horizonDays: 14, days: [1, 2, 3, 4, 5], timezone: "" };
+  const $ = (id) => document.getElementById(id);
+
+  let cfg = { ...DEFAULTS };
+  let bookings = new Map(); // key -> {start, by, note}
+  let me = null, isAdmin = false, canWrite = null, db = null, userApi = null;
+  let selectedDay = null, selectedSlot = null, loaded = false, busy = false;
+
+  const pad = (n) => String(n).padStart(2, "0");
+  const dateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const toMin = (hhmm) => { const [h, m] = String(hhmm).split(":").map(Number); return h * 60 + (m || 0); };
+  const fmtMin = (m) => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+  const keyFor = (day, min) => `${day}_${pad(Math.floor(min / 60))}${pad(min % 60)}`;
+  const startFor = (day, min) => `${day}T${fmtMin(min)}`;
+  const parseDay = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const longDay = (s) => parseDay(s).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  const shortWhen = (start) => { const [d, t] = start.split("T"); return `${parseDay(d).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })} · ${t}`; };
+
+  function sanitizeCfg(raw) {
+    const c = { ...DEFAULTS, ...(raw || {}) };
+    c.slotMinutes = Math.min(240, Math.max(5, Number(c.slotMinutes) || 30));
+    c.horizonDays = Math.min(60, Math.max(1, Number(c.horizonDays) || 14));
+    if (!Array.isArray(c.days)) c.days = DEFAULTS.days;
+    if (!/^\d{2}:\d{2}$/.test(c.start)) c.start = DEFAULTS.start;
+    if (!/^\d{2}:\d{2}$/.test(c.end)) c.end = DEFAULTS.end;
+    return c;
+  }
+
+  function scheduleDays() {
+    const out = [], today = new Date(); today.setHours(0, 0, 0, 0);
+    for (let i = 0; i < cfg.horizonDays; i++) {
+      const d = new Date(today); d.setDate(today.getDate() + i);
+      if (cfg.days.includes(d.getDay())) out.push(dateStr(d));
+    }
+    return out;
+  }
+  function slotsFor(day) {
+    const out = [], s = toMin(cfg.start), e = toMin(cfg.end), now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes(), isToday = day === dateStr(now);
+    for (let m = s; m + cfg.slotMinutes <= e; m += cfg.slotMinutes) {
+      out.push({ min: m, key: keyFor(day, m), past: isToday && m <= nowMin });
+    }
+    return out;
+  }
+
+  function setStatus(msg, kind) { const el = $("status"); el.textContent = msg || ""; el.className = "status" + (kind ? " " + kind : ""); }
+  function showNotice(msg) { const n = $("notice"); n.textContent = msg || ""; n.hidden = !msg; }
+
+  async function names(ids) {
+    if (!userApi || !ids.length) return {};
+    try { return await userApi.profiles(ids); } catch { return {}; }
+  }
+
+  function renderHeader() {
+    $("title").textContent = cfg.title || DEFAULTS.title;
+    $("desc").textContent = cfg.description || "";
+    $("desc").hidden = !cfg.description;
+    $("chipLen").textContent = `${cfg.slotMinutes} min slots`;
+    $("chipTz").textContent = cfg.timezone ? `Times in ${cfg.timezone}` : "Times as listed by the host";
+  }
+
+  function renderDays() {
+    const days = scheduleDays(), nav = $("days");
+    if (!days.includes(selectedDay)) selectedDay = days.find((d) => slotsFor(d).some((s) => !s.past)) || days[0] || null;
+    nav.replaceChildren(...days.map((d) => {
+      const dt = parseDay(d), slots = slotsFor(d);
+      const free = slots.filter((s) => !s.past && !bookings.has(s.key)).length;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "day" + (free === 0 ? " full" : "");
+      b.setAttribute("aria-pressed", String(d === selectedDay));
+      b.innerHTML = `<span class="dow"></span><span class="dnum"></span><span class="free"></span>`;
+      b.children[0].textContent = DOW[dt.getDay()];
+      b.children[1].textContent = dt.getDate();
+      b.children[2].textContent = loaded ? (free === 0 ? "full" : `${free} open`) : "…";
+      b.addEventListener("click", () => { selectedDay = d; selectedSlot = null; setStatus(""); render(); });
+      return b;
+    }));
+  }
+
+  async function renderSlots() {
+    const box = $("slots");
+    if (!selectedDay) { $("dayTitle").textContent = "No open days"; box.replaceChildren(Object.assign(document.createElement("p"), { className: "empty", textContent: "The host hasn't opened any days in the booking window yet." })); $("confirm").hidden = true; return; }
+    $("dayTitle").textContent = longDay(selectedDay);
+    const slots = slotsFor(selectedDay);
+    const otherIds = isAdmin ? [...new Set(slots.map((s) => bookings.get(s.key)?.by).filter(Boolean))] : [];
+    const ps = await names(otherIds);
+    box.replaceChildren(...slots.map((s) => {
+      const bk = bookings.get(s.key), mine = bk && me && bk.by === me;
+      const b = document.createElement("button");
+      b.type = "button";
+      let cls = "slot", sub = "Open";
+      if (mine) { cls += " mine"; sub = "Your booking"; }
+      else if (bk) { cls += " taken"; sub = isAdmin ? (ps[bk.by]?.name || "Booked") : "Booked"; }
+      else if (s.past) { cls += " past"; sub = "Passed"; }
+      else { cls += " open"; if (selectedSlot === s.key) cls += " selected"; }
+      if (!loaded && !bk) sub = "…";
+      b.className = cls;
+      b.innerHTML = `<span class="t"></span><span class="s"></span>`;
+      b.children[0].textContent = fmtMin(s.min);
+      b.children[1].textContent = sub;
+      b.disabled = !loaded || (!!bk && !mine) || (s.past && !mine);
+      b.setAttribute("aria-label", `${fmtMin(s.min)}, ${sub}`);
+      b.addEventListener("click", () => {
+        if (mine) { setStatus("This is your booking. Cancel it from “Your bookings”."); return; }
+        selectedSlot = s.key; setStatus(""); render();
+        $("note").focus({ preventScroll: true });
+      });
+      return b;
+    }));
+    const sel = selectedSlot && slots.find((s) => s.key === selectedSlot);
+    if (sel && bookings.has(sel.key)) { selectedSlot = null; setStatus("Someone just booked that slot. Pick another.", "err"); }
+    $("confirm").hidden = !(selectedSlot && sel);
+    if (sel) $("confirmWhen").textContent = `${longDay(selectedDay)}, ${fmtMin(sel.min)}–${fmtMin(sel.min + cfg.slotMinutes)}`;
+    $("bookBtn").disabled = busy || !db || !me || canWrite === false;
+  }
+
+  async function renderLists() {
+    const today = dateStr(new Date());
+    const upcoming = [...bookings.entries()].filter(([, b]) => b.start.slice(0, 10) >= today).sort((a, b) => a[1].start.localeCompare(b[1].start));
+    const mine = upcoming.filter(([, b]) => me && b.by === me);
+    $("mine").replaceChildren(...mine.map(([k, b]) => listItem(k, b, null)));
+    $("mineEmpty").hidden = mine.length > 0;
+    if (!me) $("mineEmpty").textContent = "Sign in to claude.ai to book and see your bookings.";
+
+    $("allPanel").hidden = !isAdmin;
+    if (isAdmin) {
+      const ps = await names([...new Set(upcoming.map(([, b]) => b.by))]);
+      $("all").replaceChildren(...upcoming.map(([k, b]) => listItem(k, b, ps[b.by]?.name || "Someone")));
+      $("allEmpty").hidden = upcoming.length > 0;
+      $("allCount").textContent = `${upcoming.length} upcoming`;
+    }
+  }
+
+  function listItem(key, b, who) {
+    const li = document.createElement("li");
+    const left = document.createElement("div");
+    const t = document.createElement("div"); t.className = "lt"; t.textContent = shortWhen(b.start);
+    left.append(t);
+    const extra = [who, b.note].filter(Boolean).join(" — ");
+    if (extra) { const n = document.createElement("div"); n.className = "ln"; n.textContent = extra; left.append(n); }
+    const btn = document.createElement("button");
+    btn.type = "button"; btn.className = "btn danger"; btn.textContent = "Cancel";
+    btn.addEventListener("click", () => armCancel(btn, key));
+    li.append(left, btn);
+    return li;
+  }
+
+  function armCancel(btn, key) {
+    if (btn.dataset.armed) { cancelBooking(key, btn); return; }
+    btn.dataset.armed = "1"; btn.textContent = "Confirm cancel";
+    setTimeout(() => { if (btn.isConnected) { delete btn.dataset.armed; btn.textContent = "Cancel"; } }, 4000);
+  }
+
+  async function cancelBooking(key, btn) {
+    btn.disabled = true;
+    try { await db.collection("bookings").doc(key).delete(); setStatus("Booking cancelled.", "ok"); }
+    catch (e) { btn.disabled = false; setStatus(e?.code === "invalid_argument" ? "You don't have permission to change bookings on this page." : "Couldn't cancel right now. Try again in a moment.", "err"); }
+  }
+
+  async function book() {
+    if (!selectedSlot || busy) return;
+    if (!me) { setStatus("Sign in to claude.ai to book a slot.", "err"); return; }
+    const day = selectedDay, slot = slotsFor(day).find((s) => s.key === selectedSlot);
+    if (!slot) return;
+    busy = true; $("bookBtn").disabled = true; setStatus("Booking…");
+    const ref = db.collection("bookings").doc(slot.key);
+    try {
+      const lease = await ref.acquire({ holder: me, ttlMs: 5000 });
+      if (!lease.acquired) { setStatus("Someone else is booking this slot right now. Pick another.", "err"); return; }
+      const snap = await ref.get();
+      if (snap.exists && snap.data()?.by) { setStatus("That slot was just taken. Pick another.", "err"); selectedSlot = null; return; }
+      await ref.set({ start: startFor(day, slot.min), by: me, note: $("note").value.trim().slice(0, 120), createdAt: new Date().toISOString() });
+      $("note").value = ""; selectedSlot = null;
+      setStatus(`Booked ${longDay(day)} at ${fmtMin(slot.min)}.`, "ok");
+    } catch (e) {
+      if (e?.code === "invalid_argument") { canWrite = false; showNotice("You can view this schedule, but your access level doesn't allow booking. Ask the owner for Contributor access."); setStatus(""); }
+      else if (e?.code === "quota_exceeded") setStatus("The booking store is full. Ask the owner to clear old bookings.", "err");
+      else setStatus("Couldn't book right now. Try again in a moment.", "err");
+    } finally { busy = false; render(); }
+  }
+
+  let renderQueued = false;
+  function render() {
+    if (renderQueued) return; renderQueued = true;
+    queueMicrotask(async () => { renderQueued = false; renderHeader(); renderDays(); await renderSlots(); await renderLists(); });
+  }
+
+  function fillSettings() {
+    $("sTitle").value = cfg.title; $("sDesc").value = cfg.description || "";
+    $("sStart").value = cfg.start; $("sEnd").value = cfg.end;
+    $("sLen").value = String(cfg.slotMinutes); $("sHorizon").value = String(cfg.horizonDays);
+    $("sTz").value = cfg.timezone || "";
+    $("sDays").replaceChildren(...[1, 2, 3, 4, 5, 6, 0].map((d) => {
+      const l = document.createElement("label"); const i = document.createElement("input");
+      i.type = "checkbox"; i.value = d; i.id = "sDay" + d; i.checked = cfg.days.includes(d);
+      l.append(i, document.createTextNode(DOW[d])); return l;
+    }));
+  }
+
+  $("bookBtn").addEventListener("click", book);
+  $("cancelSel").addEventListener("click", () => { selectedSlot = null; setStatus(""); render(); });
+  $("settingsForm").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const st = $("settingsStatus");
+    const next = {
+      title: $("sTitle").value.trim() || DEFAULTS.title, description: $("sDesc").value.trim(),
+      start: $("sStart").value, end: $("sEnd").value, slotMinutes: Number($("sLen").value),
+      horizonDays: Number($("sHorizon").value), timezone: $("sTz").value.trim(),
+      days: [...$("sDays").querySelectorAll("input:checked")].map((i) => Number(i.value)),
+    };
+    if (toMin(next.end) - toMin(next.start) < next.slotMinutes) { st.textContent = "The day must be at least one slot long."; st.className = "status err"; return; }
+    $("saveSettings").disabled = true; st.textContent = "Saving…"; st.className = "status";
+    try { await db.doc("config/schedule").set(next); st.textContent = "Saved."; st.className = "status ok"; }
+    catch { st.textContent = "Couldn't save. Only the owner and editors can change settings."; st.className = "status err"; }
+    finally { $("saveSettings").disabled = false; }
+  });
+
+  render();
+
+  (async () => {
+    const c = window.claude;
+    if (!c?.use) { showNotice("Open this page on claude.ai to see live availability and book."); loaded = true; render(); return; }
+    [db, userApi] = await Promise.all([c.use("db"), c.use("user")]);
+    if (userApi) {
+      me = await userApi.id();
+      isAdmin = await userApi.canEdit();
+      canWrite = await userApi.can("data.write");
+    }
+    if (!db) { showNotice("Sign in to claude.ai to see availability and book a slot."); loaded = true; render(); return; }
+    if (!me) showNotice("Sign in to claude.ai to book a slot. You can still browse availability.");
+    else if (canWrite === false) showNotice("You can view this schedule, but your access level doesn't allow booking. Ask the owner for Contributor access.");
+    if (isAdmin) { $("settingsPanel").hidden = false; fillSettings(); }
+
+    const slow = setTimeout(() => showNotice("Can't reach the booking store yet. Availability may be out of date."), 10000);
+    db.doc("config/schedule").onSnapshot((snap) => {
+      cfg = sanitizeCfg(snap.exists ? snap.data() : null);
+      if (isAdmin && !$("settingsPanel").querySelector("details").open) fillSettings();
+      render();
+    }, () => {});
+    const from = dateStr(new Date());
+    db.collection("bookings").where("start", ">=", from).limit(1000).onSnapshot((snap) => {
+      const m = new Map();
+      for (const d of snap.docs) { const b = d.data(); if (b && b.by && b.start) m.set(d.id, b); }
+      bookings = m;
+      if (!snap.metadata.fromCache) { clearTimeout(slow); loaded = true; if ($("notice").textContent.startsWith("Can't reach")) showNotice(""); }
+      else loaded = true;
+      render();
+    }, (e) => {
+      clearTimeout(slow); loaded = true;
+      showNotice(e?.code === "revoked" ? "Access to this page changed. Reload to continue." : "Live availability stopped updating. Reload the page to reconnect.");
+      render();
+    });
+  })();
+})();
+</script>
