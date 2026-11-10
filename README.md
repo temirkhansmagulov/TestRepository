@@ -5,6 +5,8 @@
 и без внешних API — расчёты выполняются полностью на введённых
 пользователем данных.
 
+**Демо:** https://temirkhansmagulov.github.io/TestRepository/
+
 ## Запуск
 
 Приложение представляет собой статическую страницу (HTML/CSS/JS без
@@ -16,6 +18,13 @@ python3 -m http.server 8000
 ```
 
 и открыть `http://localhost:8000` в браузере.
+
+## Публикация на GitHub Pages
+
+Workflow `.github/workflows/pages.yml` публикует `index.html`, `style.css`
+и `app.js` на GitHub Pages при каждом push в ветку по умолчанию (или
+вручную через вкладку Actions). Один раз нужно включить Pages:
+**Settings → Pages → Source: GitHub Actions**.
 
 ## Реализованные функции
 
